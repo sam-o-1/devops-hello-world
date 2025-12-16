@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis  # <--- This creates the DNS name "redis" inside the cluster
+spec:
+  selector:
+    app: redis # <--- Looks for the Pod you just built
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379

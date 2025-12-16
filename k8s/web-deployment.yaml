@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: web
+        # CHANGE THIS TO YOUR ACTUAL DOCKER HUB USERNAME
+        image: samo1o/devops-hello-world:latest
+        ports:
+        - containerPort: 5000
+        imagePullPolicy: Never
