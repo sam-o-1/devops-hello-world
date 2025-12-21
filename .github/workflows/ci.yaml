@@ -1,14 +1,14 @@
-name: CI Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
     branches:
       - main
-    paths:
-      - '**' # Triggers on any file change
+    paths-ignore:
+      - 'k8s/**'  # STOP THE LOOP: Don't run if only the k8s YAML changes
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
     
     steps:
@@ -26,4 +26,19 @@ jobs:
       with:
         context: .
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/my-app:latest
+        tags: ${{ secrets.DOCKER_USERNAME }}/my-app:${{ github.sha }}
+
+    - name: Update Kubernetes Manifest
+      run: |
+        # Configure Git
+        git config --global user.email "github-actions@github.com"
+        git config --global user.name "GitHub Actions"
+        
+        # Update the image tag in the YAML file
+        # This replaces 'my-app:anything' with 'my-app:current-commit-hash'
+        sed -i "s|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/my-app:${{ github.sha }}|g" k8s/web-deployment.yaml
+        
+        # Commit and Push the change
+        git add k8s/web-deployment.yaml
+        git commit -m "Update image to ${{ github.sha }}"
+        git push
