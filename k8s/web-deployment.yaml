@@ -15,7 +15,7 @@ spec:
       containers:
       - name: web
         # CHANGE THIS TO YOUR ACTUAL DOCKER HUB USERNAME
-        image: samo1o/devops-hello-world:latest
+        image: samo1o/my-app:330a75e294eb39fe9d89cf2bae9b1380ee74ac9b
         ports:
         - containerPort: 5000
         imagePullPolicy: Never
