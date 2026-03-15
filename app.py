@@ -1,31 +1,47 @@
+import time
+import redis
+import boto3  # New: AWS SDK
 from flask import Flask
-from redis import Redis
-import os
 
 app = Flask(__name__)
+cache = redis.Redis(host='redis', port=6379)
 
-# Connect to Redis (using the environment variable for flexibility)
-redis_host = os.environ.get('REDIS_HOST', 'redis')
-redis = Redis(host=redis_host, port=6379)
+# New: S3 Client Configuration
+s3 = boto3.client(
+    's3',
+    endpoint_url='http://localstack:4566',  # Talking to your LocalStack container
+    aws_access_key_id='test',
+    aws_secret_access_key='test',
+    region_name='us-east-1'
+)
+
+def get_hit_count():
+    retries = 5
+    while True:
+        try:
+            return cache.incr('hits')
+        except redis.exceptions.ConnectionError as exc:
+            if retries == 0:
+                raise exc
+            retries -= 1
+            time.sleep(0.5)
 
 @app.route('/')
 def hello():
+    count = get_hit_count()
+    
+    # New: Every time someone visits, we log it to our "Cloud" bucket
     try:
-        redis.incr('hits')
-        counter = str(redis.get('hits'), 'utf-8')
-    except Exception:
-        counter = "Error connecting to Redis"
+        s3.put_object(
+            Bucket='soham-devops-project-bucket', 
+            Key='logs.txt', 
+            Body=f'Total hits so far: {count}'
+        )
+        s3_status = "Success: Logged to S3"
+    except Exception as e:
+        s3_status = f"Failed: S3 Error {e}"
 
-    # HTML with a RED background to prove the update worked
-    html = f"""
-    <div style="background-color: #e74c3c; color: white; padding: 50px; font-family: sans-serif; text-align: center;">
-        <h1>🔥 CI/CD Pipeline Success! 🔥</h1>
-        <p>This update was deployed automatically by GitHub Actions.</p>
-        <br>
-        <h2>Visitor Count: {counter}</h2>
-    </div>
-    """
-    return html
+    return f'Hello! I have been seen {count} times. S3 Status: {s3_status}\n'
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", debug=True)

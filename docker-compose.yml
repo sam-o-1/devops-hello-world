@@ -6,11 +6,23 @@ services:
       - "5000:5000"
     depends_on:
       - redis
+      - localstack
+    environment:
+      - REDIS_HOST=redis
+      - AWS_ENDPOINT_URL=http://localstack:4566
 
   redis:
     image: "redis:alpine"
-    volumes:            # <--- NEW PART
-      - redis-data:/data # <--- Map the vault to the container
 
-volumes:                 # <--- Register the vault
-  redis-data:
+  localstack:
+    container_name: localstack_main
+    image: localstack/localstack:latest
+    ports:
+      - "127.0.0.1:4566:4566"
+      - "127.0.0.1:4510-4559:4510-4559"
+    environment:
+      - SERVICES=s3,ec2
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - "./volume:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
